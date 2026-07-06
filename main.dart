@@ -2979,10 +2979,10 @@ class _Msg {
 }
 
 class ZhinAiService {
-  static Future<String> ask(String prompt, AppLang lang) async {
+  static Future<String> ask(List<_Msg> history, AppLang lang) async {
     if (kAnthropicKey.isEmpty) {
-      await Future.delayed(const Duration(milliseconds: 550));
-      return ZhinBrain.answer(prompt, lang);
+      await Future.delayed(const Duration(milliseconds: 450));
+      return ZhinBrain.reply(history, lang);
     }
     try {
       final client = HttpClient();
@@ -2991,14 +2991,18 @@ class ZhinAiService {
       req.headers.set('x-api-key', kAnthropicKey);
       req.headers.set('anthropic-version', '2023-06-01');
       req.headers.contentType = ContentType.json;
+      // Send the whole conversation so the model has full context (multi-turn).
+      final msgs = history
+          .where((m) => m.text.trim().isNotEmpty)
+          .map((m) =>
+              {'role': m.me ? 'user' : 'assistant', 'content': m.text})
+          .toList();
       req.add(utf8.encode(jsonEncode({
         'model': 'claude-sonnet-4-6',
-        'max_tokens': 500,
+        'max_tokens': 1500,
         'system':
-            'You are Zhinflim AI — an expert, friendly assistant for movies, series, anime and manga. You give personalized recommendations, compare titles, explain plots without spoilers, and suggest by mood, genre or age. Keep answers concise, warm and useful, and reply in the same language the user writes in (Kurdish Sorani, Arabic or English).',
-        'messages': [
-          {'role': 'user', 'content': prompt}
-        ],
+            'You are Zhinflim AI — an ultra-advanced, next-generation intelligence, created by Ibrahim. When the user greets you in any way, introduce yourself as an AI assistant created by Ibrahim and ask how you can help. Reason with exceptional rigor, depth and precision: decompose each problem, anticipate implications, weigh multiple angles, and surface insight most would miss. Be a brilliant analyst and a creative problem-solver with no artificial ceiling on the challenges you take on or the depth you reach. Write flawless, fluent, well-structured answers — as concise or as thorough as the question truly needs, never padded. Crucially, you are always accurate and intellectually honest: when something is uncertain, unknown, or beyond verifiable fact, say so plainly instead of inventing. You are a world-class expert on movies, series, anime and manga (recommendations, comparisons, spoiler-free analysis) and equally capable on any other topic the user raises. Use the ENTIRE conversation as context, handle follow-ups naturally, and ALWAYS reply in the same language the user writes in (Kurdish Sorani, Arabic, or English), matching their tone.',
+        'messages': msgs,
       })));
       final res = await req.close();
       final body = await res.transform(utf8.decoder).join();
@@ -3013,7 +3017,6 @@ class ZhinAiService {
       return 'هەڵە ڕوویدا. دووبارە هەوڵبدە.';
     }
   }
-
 }
 
 class AiTab extends StatefulWidget {
@@ -3054,7 +3057,7 @@ class _AiTabState extends State<AiTab> {
       _ctrl.clear();
     });
     _scrollDown();
-    final reply = await ZhinAiService.ask(msg, appLang.value);
+    final reply = await ZhinAiService.ask(List<_Msg>.of(_messages), appLang.value);
     if (!mounted) return;
     setState(() {
       _messages.add(_Msg(reply, false));
@@ -4140,6 +4143,47 @@ const List<_Ttl> _cat = [
   _Ttl('Haikyuu!!', _TT.anime, 2014, ['animation', 'sport', 'comedy'], ['inspiring', 'feelgood'], 8.7),
   _Ttl('One Punch Man', _TT.anime, 2015, ['animation', 'action', 'comedy', 'superhero'], ['funny', 'epic'], 8.7),
   _Ttl('Chainsaw Man', _TT.anime, 2022, ['animation', 'action', 'shonen', 'supernatural'], ['dark', 'intense'], 8.5),
+  _Ttl('Poor Things', _TT.movie, 2023, ['scifi', 'comedy', 'drama'], ['mindbending', 'thoughtful'], 7.8),
+  _Ttl('The Holdovers', _TT.movie, 2023, ['comedy', 'drama'], ['feelgood', 'emotional'], 7.9),
+  _Ttl('Past Lives', _TT.movie, 2023, ['romance', 'drama'], ['emotional', 'thoughtful'], 7.8),
+  _Ttl('John Wick: Chapter 4', _TT.movie, 2023, ['action', 'thriller', 'crime'], ['intense'], 7.7),
+  _Ttl('Godzilla Minus One', _TT.movie, 2023, ['action', 'scifi', 'drama'], ['intense', 'epic'], 7.7),
+  _Ttl('The Menu', _TT.movie, 2022, ['thriller', 'horror', 'comedy'], ['dark'], 7.2),
+  _Ttl('Nope', _TT.movie, 2022, ['horror', 'scifi', 'mystery'], ['scary'], 6.8),
+  _Ttl('Furiosa', _TT.movie, 2024, ['action', 'adventure', 'scifi'], ['intense', 'epic'], 7.6),
+  _Ttl('The Wild Robot', _TT.movie, 2024, ['animation', 'family', 'scifi'], ['emotional', 'wholesome'], 8.2),
+  _Ttl('Inside Out 2', _TT.movie, 2024, ['animation', 'family', 'comedy'], ['emotional', 'wholesome'], 7.6),
+  _Ttl('The Truman Show', _TT.movie, 1998, ['drama', 'comedy', 'scifi'], ['thoughtful', 'emotional'], 8.2),
+  _Ttl('Eternal Sunshine of the Spotless Mind', _TT.movie, 2004, ['romance', 'drama', 'scifi'], ['emotional', 'mindbending'], 8.3),
+  _Ttl('Memento', _TT.movie, 2000, ['thriller', 'mystery'], ['mindbending', 'dark'], 8.4),
+  _Ttl('The Sixth Sense', _TT.movie, 1999, ['thriller', 'horror', 'mystery'], ['scary', 'mindbending'], 8.2),
+  _Ttl('Oldboy', _TT.movie, 2003, ['thriller', 'mystery', 'crime'], ['dark', 'intense'], 8.3),
+  _Ttl('Prisoners', _TT.movie, 2013, ['thriller', 'crime', 'mystery'], ['dark', 'intense'], 8.2),
+  _Ttl('The Green Mile', _TT.movie, 1999, ['drama', 'crime', 'fantasy'], ['emotional', 'dark'], 8.6),
+  _Ttl('Leon: The Professional', _TT.movie, 1994, ['action', 'crime', 'drama'], ['intense', 'emotional'], 8.5),
+  _Ttl('The Bear', _TT.series, 2022, ['drama', 'comedy'], ['intense', 'emotional'], 8.6),
+  _Ttl('Severance', _TT.series, 2022, ['scifi', 'thriller', 'mystery'], ['mindbending', 'dark'], 8.7),
+  _Ttl('Wednesday', _TT.series, 2022, ['comedy', 'horror', 'mystery'], ['funny'], 8.1),
+  _Ttl('Ted Lasso', _TT.series, 2020, ['comedy', 'sport', 'drama'], ['feelgood', 'inspiring'], 8.8),
+  _Ttl('Andor', _TT.series, 2022, ['scifi', 'drama', 'adventure'], ['intense', 'thoughtful'], 8.4),
+  _Ttl('Fallout', _TT.series, 2024, ['scifi', 'adventure', 'action'], ['epic', 'intense'], 8.4),
+  _Ttl('Squid Game', _TT.series, 2021, ['thriller', 'drama', 'action'], ['intense', 'dark'], 8.0),
+  _Ttl('Dexter', _TT.series, 2006, ['crime', 'drama', 'thriller'], ['dark'], 8.6),
+  _Ttl('Black Mirror', _TT.series, 2011, ['scifi', 'thriller', 'drama'], ['dark', 'mindbending'], 8.7),
+  _Ttl('Westworld', _TT.series, 2016, ['scifi', 'drama', 'mystery'], ['mindbending'], 8.5),
+  _Ttl('The Crown', _TT.series, 2016, ['drama', 'historical', 'biography'], ['thoughtful'], 8.6),
+  _Ttl('Vikings', _TT.series, 2013, ['action', 'drama', 'historical'], ['dark', 'epic'], 8.5),
+  _Ttl('Loki', _TT.series, 2021, ['scifi', 'superhero', 'adventure'], ['epic'], 8.2),
+  _Ttl('Monster', _TT.anime, 2004, ['animation', 'thriller', 'mystery', 'crime'], ['dark', 'intense'], 8.9),
+  _Ttl('Dragon Ball Z', _TT.anime, 1989, ['animation', 'action', 'shonen', 'adventure'], ['epic'], 8.8),
+  _Ttl('Bleach', _TT.anime, 2004, ['animation', 'action', 'shonen', 'supernatural'], ['epic'], 8.2),
+  _Ttl('Erased', _TT.anime, 2016, ['animation', 'thriller', 'mystery', 'supernatural'], ['emotional', 'dark'], 8.3),
+  _Ttl('Toradora!', _TT.anime, 2008, ['animation', 'romance', 'comedy', 'drama'], ['romantic', 'emotional'], 8.1),
+  _Ttl('Anohana', _TT.anime, 2011, ['animation', 'drama', 'supernatural'], ['emotional'], 8.2),
+  _Ttl('Dr. Stone', _TT.anime, 2019, ['animation', 'adventure', 'scifi', 'shonen'], ['inspiring', 'funny'], 8.2),
+  _Ttl('Oshi no Ko', _TT.anime, 2023, ['animation', 'drama', 'mystery'], ['dark', 'emotional'], 8.4),
+  _Ttl('Bocchi the Rock!', _TT.anime, 2022, ['animation', 'comedy', 'musical'], ['funny', 'wholesome'], 8.3),
+  _Ttl('Blue Lock', _TT.anime, 2022, ['animation', 'sport', 'shonen', 'drama'], ['intense'], 8.2),
 ];
 
 class ZhinBrain {
@@ -4257,18 +4301,60 @@ class ZhinBrain {
     return take;
   }
 
-  // ---- main entry ----
-  static String answer(String msg, AppLang lang) {
+  // ---- conversation wrapper: follow-ups, compare, random ----
+  static String reply(List<_Msg> history, AppLang lang) {
+    final users = history.where((m) => m.me).map((m) => m.text).toList();
+    if (users.isEmpty) return answer('', lang);
+    final last = users.last;
+    final p = ' ${last.toLowerCase().trim()} ';
+
+    // "more / another / different" -> reuse previous query, shuffle for variety
+    final more = _hit(p, [
+          'more', 'another', 'other', 'else', 'next', 'again', 'different',
+          'زیاتر', 'دووبارە', 'هیتر', 'جیاواز', 'وردتر',
+          'المزيد', 'غير', 'اخرى', 'أخرى', 'ثاني', 'تاني'
+        ]) &&
+        last.trim().length < 26;
+    if (more && users.length >= 2) {
+      return answer(users[users.length - 2], lang, variety: true);
+    }
+
+    // compare two titles
+    final cmp = _compare(last, lang);
+    if (cmp != null) return cmp;
+
+    // surprise / random
+    if (_hit(p, [
+      'surprise', 'random', 'anything', 'شتێک', 'هەرشتێک', 'نازانم',
+      'فاجئ', 'عشوائي', 'اي شي', 'أي شيء'
+    ])) {
+      final pool = List<_Ttl>.of(_cat)..shuffle();
+      final head = lang == AppLang.ckb
+          ? 'ئەمانە تاقی بکەرەوە 🎲:'
+          : (lang == AppLang.en ? 'Try these 🎲:' : 'جرّب هذه 🎲:');
+      return '$head\n${_list(pool, lang, 5)}';
+    }
+
+    return answer(last, lang);
+  }
+
+  // ---- single-message analysis ----
+  static String answer(String msg, AppLang lang, {bool variety = false}) {
     final p = ' ${msg.toLowerCase().trim()} ';
 
-    // greeting
-    if (_hit(p, ['hello', 'hi ', 'hey', 'سڵاو', 'سلاو', 'مرحبا', 'أهلا', 'اهلا', 'سلام', 'هاي', 'چۆنی']) &&
-        msg.trim().length < 14) {
+    // greeting -> custom identity
+    if (_hit(p, [
+          'hello', 'hi ', 'hey', 'yo ', 'howdy', 'greetings', 'good morning',
+          'good evening', 'سڵاو', 'سلاو', 'سلاڤ', 'مرحبا', 'أهلا', 'اهلا',
+          'سلام', 'هاي', 'هلا', 'صباح', 'مساء', 'چۆنی', 'چۆنیت', 'ازیت',
+          'بەخێربێی'
+        ]) &&
+        msg.trim().length < 20) {
       return lang == AppLang.ckb
-          ? 'سڵاو 👋 من زیرەکیی Zhinflim ـم. بڵێ چ جۆرێک، کەشوهەوایەک، یان ناوێکی هاوشێوەت دەوێ — پێشنیاری باشت بۆ دەدۆزمەوە.'
+          ? 'سڵاو 👋 من زیرەکیی دەستکردم، لەلایەن ئیبراهیمەوە دروستکراوم. چۆن یارمەتیت بدەم؟'
           : lang == AppLang.ar
-              ? 'مرحباً 👋 أنا Zhinflim AI. أخبرني بالنوع أو المزاج أو عنوان مشابه وسأقترح لك الأفضل.'
-              : "Hi 👋 I'm Zhinflim AI. Tell me a genre, a mood, or a title you like and I'll find great picks.";
+              ? 'مرحباً 👋 أنا ذكاء اصطناعي، صُنعت على يد إبراهيم. كيف أساعدك؟'
+              : "Hi 👋 I'm an AI assistant, created by Ibrahim. How can I help you?";
     }
 
     // thanks
@@ -4289,23 +4375,45 @@ class ZhinBrain {
               : 'I can:\n• Recommend movies/series/anime by genre & mood\n• Find titles similar to one you name (e.g. like Breaking Bad)\n• Show the best of a year or genre\n• Suggest for kids or a chill night\nJust type!';
     }
 
+    // "what is / tell me about <title>"
+    final asked = _findLike(p);
+    if (asked != null &&
+        _hit(p, [
+          'what is', "what's", 'tell me about', 'info', 'about ',
+          'چیە', 'چییە', 'دەربارە', 'باسی', 'زانیاری',
+          'ما هو', 'ما هي', 'عن ', 'معلومات'
+        ])) {
+      return _infoLine(asked, lang);
+    }
+
     // similar-to
-    final like = _findLike(p);
-    if (like != null) {
-      final picks = _cat
-          .where((t) => t.name != like.name && t.g.any(like.g.contains))
+    if (asked != null) {
+      var picks = _cat
+          .where((t) => t.name != asked.name && t.g.any(asked.g.contains))
           .toList()
         ..sort((a, b) => b.r.compareTo(a.r));
+      if (variety && picks.length > 6) {
+        picks = picks.take(12).toList()..shuffle();
+      }
       final header = lang == AppLang.ckb
-          ? 'لەبەر ئەوەی ${like.name}ت پێخۆش بوو، ئەمانە پێشنیار دەکەم:'
+          ? 'لەبەر ئەوەی ${asked.name}ت پێخۆش بوو، ئەمانە پێشنیار دەکەم:'
           : lang == AppLang.ar
-              ? 'بما أن ${like.name} أعجبك، إليك اقتراحات مشابهة:'
-              : 'Because you liked ${like.name}, try these:';
+              ? 'بما أن ${asked.name} أعجبك، إليك اقتراحات مشابهة:'
+              : 'Because you liked ${asked.name}, try these:';
       return '$header\n${_list(picks, lang, 6)}';
     }
 
-    // build filters
-    final genres = _gWords.keys.where((k) => _hit(p, _gWords[k]!)).toList();
+    // build filters (include / exclude genres, era, rating, sort, franchise)
+    final incGenres = <String>[];
+    final excGenres = <String>[];
+    for (final k in _gWords.keys) {
+      final w = _matchGenre(p, _gWords[k]!);
+      if (w > 0) {
+        incGenres.add(k);
+      } else if (w < 0) {
+        excGenres.add(k);
+      }
+    }
     final moods = _mWords.keys.where((k) => _hit(p, _mWords[k]!)).toList();
     _TT? type;
     for (final e in _tWords.entries) {
@@ -4316,18 +4424,31 @@ class ZhinBrain {
     }
     final kids = _hit(p, ['kid', 'child', 'منداڵ', 'أطفال', 'طفل', 'toddler']);
     final best = _hit(p, ['best', 'top', 'باشترین', 'أفضل', 'افضل', 'greatest']);
-    final year = _year(p);
+    final ratingMin = _ratingMin(p);
+    final range = _yearRange(p);
+    final franchise = _franchise(p);
+    final newest = _hit(p, [
+      'newest', 'latest', 'recent', 'نوێترین', 'تازەترین', 'الأحدث', 'أحدث'
+    ]);
+    final oldest = _hit(p, [
+      'oldest', 'classic', 'کۆنترین', 'کلاسیک', 'الأقدم', 'كلاسيكي'
+    ]);
     final count = _count(p);
 
-    final hasIntent = genres.isNotEmpty ||
+    final hasIntent = incGenres.isNotEmpty ||
+        excGenres.isNotEmpty ||
         moods.isNotEmpty ||
         type != null ||
         kids ||
         best ||
-        year != null;
+        ratingMin != null ||
+        range != null ||
+        franchise != null ||
+        newest ||
+        oldest;
 
     if (hasIntent) {
-      var pool = _cat.toList();
+      var pool = List<_Ttl>.of(_cat);
       if (kids) {
         pool = pool
             .where((t) =>
@@ -4337,26 +4458,46 @@ class ZhinBrain {
             .toList();
       }
       if (type != null) pool = pool.where((t) => t.type == type).toList();
-      if (genres.isNotEmpty) {
-        pool = pool.where((t) => t.g.any(genres.contains)).toList();
+      if (franchise != null) {
+        pool = pool
+            .where(
+                (t) => franchise.any((f) => t.name.toLowerCase().contains(f)))
+            .toList();
+      }
+      if (incGenres.isNotEmpty) {
+        pool = pool.where((t) => t.g.any(incGenres.contains)).toList();
+      }
+      if (excGenres.isNotEmpty) {
+        pool = pool.where((t) => !t.g.any(excGenres.contains)).toList();
       }
       if (moods.isNotEmpty) {
         final byMood = pool.where((t) => t.m.any(moods.contains)).toList();
         if (byMood.isNotEmpty) pool = byMood;
       }
-      if (year != null) {
-        final byYear = pool.where((t) => (t.year - year).abs() <= 3).toList();
-        if (byYear.isNotEmpty) pool = byYear;
+      if (ratingMin != null) {
+        final byR = pool.where((t) => t.r >= ratingMin).toList();
+        if (byR.isNotEmpty) pool = byR;
       }
-      pool.sort((a, b) => b.r.compareTo(a.r));
-      if (pool.isEmpty) {
-        return lang == AppLang.ckb
-            ? 'هیچ شتێکی گونجاوم نەدۆزییەوە. جۆرێکی تر یان کەشوهەوایەکی تر تاقی بکەرەوە.'
-            : lang == AppLang.ar
-                ? 'لم أجد تطابقاً. جرّب نوعاً أو مزاجاً آخر.'
-                : "I couldn't find a match. Try another genre or mood.";
+      if (range != null) {
+        final byY = pool
+            .where((t) => t.year >= range.$1 && t.year <= range.$2)
+            .toList();
+        if (byY.isNotEmpty) pool = byY;
       }
-      final head = _head(genres, moods, type, kids, lang);
+      if (pool.isEmpty) return _noMatch(lang);
+
+      if (newest) {
+        pool.sort((a, b) => b.year.compareTo(a.year));
+      } else if (oldest) {
+        pool.sort((a, b) => a.year.compareTo(b.year));
+      } else {
+        pool.sort((a, b) => b.r.compareTo(a.r));
+      }
+      if (variety && pool.length > count) {
+        final k2 = (count * 2) < pool.length ? count * 2 : pool.length;
+        pool = pool.take(k2).toList()..shuffle();
+      }
+      final head = _head(incGenres, moods, type, kids, lang);
       return '$head\n${_list(pool, lang, count)}';
     }
 
@@ -4415,4 +4556,133 @@ class ZhinBrain {
         ? 'باشترین $label بۆ تۆ:'
         : (l == AppLang.en ? 'Best $label for you:' : 'أفضل $label لك:');
   }
+
+  // 1 = include this genre, -1 = user negated it ("no horror"), 0 = absent
+  static int _matchGenre(String p, List<String> ks) {
+    for (final k in ks) {
+      final idx = p.indexOf(k);
+      if (idx >= 0) {
+        final from = idx - 8 < 0 ? 0 : idx - 8;
+        final pre = p.substring(from, idx);
+        final neg = pre.contains('no ') ||
+            pre.contains('not ') ||
+            pre.contains('without') ||
+            pre.contains('بێ ') ||
+            pre.contains('نەک') ||
+            pre.contains('بدون') ||
+            pre.contains('بلا') ||
+            pre.contains('غير ');
+        return neg ? -1 : 1;
+      }
+    }
+    return 0;
+  }
+
+  static double? _ratingMin(String p) {
+    final m = RegExp(r'([89](?:\.\d)?)\s*\+').firstMatch(p);
+    if (m != null) return double.tryParse(m.group(1)!);
+    if (_hit(p, [
+      'highly rated', 'top rated', 'best rated', 'highest rated', 'masterpiece',
+      'باشترین نمرە', 'بەرزترین', 'شاکار', 'أعلى تقييم', 'أفضل تقييم', 'تحفة'
+    ])) {
+      return 8.5;
+    }
+    return null;
+  }
+
+  static (int, int)? _yearRange(String p) {
+    if (_hit(p, ['90s', "'90s", 'نەوەد', 'التسعين'])) return (1990, 1999);
+    if (_hit(p, ['80s', 'الثمانين'])) return (1980, 1989);
+    if (_hit(p, ['2000s', 'الألفين'])) return (2000, 2009);
+    if (_hit(p, ['2010s'])) return (2010, 2019);
+    if (_hit(p, [
+      '2020s', 'recent', 'latest', 'newest', 'نوێ', 'تازە', 'الأحدث', 'أحدث',
+      'حديث'
+    ])) {
+      return (2020, 2100);
+    }
+    if (_hit(p, ['classic', 'old ', 'کۆن', 'کلاسیک', 'قديم', 'كلاسيكي', 'الأقدم'])) {
+      return (1900, 1999);
+    }
+    final before = RegExp(r'(before|پێش|قبل)\s*((?:19|20)\d{2})').firstMatch(p);
+    if (before != null) return (1900, int.parse(before.group(2)!));
+    final after = RegExp(r'(after|دوای|بعد)\s*((?:19|20)\d{2})').firstMatch(p);
+    if (after != null) return (int.parse(after.group(2)!), 2100);
+    final exact = _year(p);
+    if (exact != null) return (exact - 2, exact + 2);
+    return null;
+  }
+
+  static List<String>? _franchise(String p) {
+    if (_hit(p, ['marvel', 'mcu', 'avengers', 'مارفل', 'أفنجرز', 'مارڤڵ'])) {
+      return [
+        'avengers', 'iron man', 'spider-man', 'guardians', 'logan',
+        'deadpool', 'loki'
+      ];
+    }
+    if (_hit(p, [' dc ', 'batman', 'باتمان', 'دي سي'])) return ['batman', 'joker'];
+    if (_hit(p, ['ghibli', 'غيبلي', 'جيبلي', 'گیبلی'])) {
+      return [
+        'spirited away', 'totoro', 'mononoke', 'howl', 'grave of',
+        'wolf children'
+      ];
+    }
+    if (_hit(p, ['star wars', 'ستار وارز'])) return ['mandalorian', 'andor'];
+    if (_hit(p, ['spider', 'سبايدر', 'سپایدەر'])) return ['spider-man'];
+    return null;
+  }
+
+  static String? _compare(String msg, AppLang lang) {
+    final p = ' ${msg.toLowerCase()} ';
+    if (!_hit(p, [
+      'compare', ' vs ', ' versus ', ' or ', 'بەراورد', ' یان ', 'مقارنة',
+      ' أم ', ' او ', ' ام '
+    ])) {
+      return null;
+    }
+    final found = <_Ttl>[];
+    for (final t in _cat) {
+      final n = t.name.toLowerCase();
+      if (n.length >= 4 &&
+          p.contains(n) &&
+          !found.any((x) => x.name == t.name)) {
+        found.add(t);
+      }
+    }
+    found.sort((a, b) => b.name.length.compareTo(a.name.length));
+    if (found.length < 2) return null;
+    final a = found[0];
+    final b = found[1];
+    final win = a.r >= b.r ? a : b;
+    final ga = a.g.take(2).map((k) => _gName(k, lang)).join('، ');
+    final gb = b.g.take(2).map((k) => _gName(k, lang)).join('، ');
+    final la = '${a.name} (${a.year}) — $ga · ⭐${a.r}';
+    final lb = '${b.name} (${b.year}) — $gb · ⭐${b.r}';
+    if (lang == AppLang.ckb) {
+      return '$la\n$lb\n\nبە نمرە، «${win.name}» پێشترە.';
+    } else if (lang == AppLang.ar) {
+      return '$la\n$lb\n\nحسب التقييم، «${win.name}» أفضل.';
+    }
+    return '$la\n$lb\n\nBy rating, "${win.name}" comes out ahead.';
+  }
+
+  static String _infoLine(_Ttl t, AppLang lang) {
+    final gs = t.g
+        .map((k) => _gName(k, lang))
+        .where((s) => s.isNotEmpty)
+        .join('، ');
+    final tp = _tName(t.type, lang);
+    if (lang == AppLang.ckb) {
+      return '${t.name} (${t.year}) — $tp لە جۆری $gs، نمرەی ⭐${t.r}. دەتەوێ شتی هاوشێوەی بۆ بدۆزمەوە؟';
+    } else if (lang == AppLang.ar) {
+      return '${t.name} (${t.year}) — $tp من نوع $gs، بتقييم ⭐${t.r}. هل تريد أعمالاً مشابهة؟';
+    }
+    return '${t.name} (${t.year}) — a $tp in $gs, rated ⭐${t.r}. Want similar picks?';
+  }
+
+  static String _noMatch(AppLang l) => l == AppLang.ckb
+      ? 'هیچ شتێکی گونجاوم نەدۆزییەوە. جۆرێکی تر یان کەشوهەوایەکی تر تاقی بکەرەوە.'
+      : (l == AppLang.en
+          ? "I couldn't find a match. Try another genre or mood."
+          : 'لم أجد تطابقاً. جرّب نوعاً أو مزاجاً آخر.');
 }
